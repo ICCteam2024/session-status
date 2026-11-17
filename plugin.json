@@ -1,0 +1,6 @@
+{
+  "name": "session-status",
+  "displayName": "Session Status Footer",
+  "version": "1.0.0",
+  "description": "Hiển thị token context, trạng thái ngữ cảnh và background tasks ở cuối mỗi lượt trả lời."
+}

@@ -1,0 +1,11 @@
+{
+  "session-status-footer": {
+    "PostInvocation": [
+      {
+        "type": "command",
+        "command": "node scripts/status_footer.js",
+        "timeout": 10
+      }
+    ]
+  }
+}
