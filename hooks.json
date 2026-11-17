@@ -1,6 +1,6 @@
 {
   "session-status-footer": {
-    "Stop": [
+    "PostInvocation": [
       {
         "type": "command",
         "command": "node scripts/status_footer.js",
