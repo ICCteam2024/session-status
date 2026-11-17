@@ -130,11 +130,10 @@ function makeProgressBar(pct) {
   return '█'.repeat(filled) + '░'.repeat(empty);
 }
 
-function buildFooter({ lastInputTokens, lastOutputTokens, lastCacheTokens, daemonTasks, fullyIdle }) {
-  const ctxTokens = lastInputTokens;
-  const { emoji, label } = contextStatus(ctxTokens);
+function buildFooter({ totalTokens, lastInputTokens, lastOutputTokens, lastCacheTokens, daemonTasks }) {
+  const { emoji, label } = contextStatus(totalTokens);
   const MAX_CONTEXT = 200000;
-  const pct = Math.min(100, Math.round((ctxTokens / MAX_CONTEXT) * 1000) / 10);
+  const pct = Math.min(100, Math.round((totalTokens / MAX_CONTEXT) * 1000) / 10);
   const bar = makeProgressBar(pct);
 
   const taskStr = daemonTasks.length > 0
@@ -144,20 +143,29 @@ function buildFooter({ lastInputTokens, lastOutputTokens, lastCacheTokens, daemo
   return [
     '---',
     `> ${emoji} **Session Status** \`[${bar}] ${pct}%\` (${label})  `,
-    `> 🧠 Context: **${fmt(ctxTokens)}** · 💾 Cache: **${fmt(lastCacheTokens)}** · 📤 Out: **${fmt(lastOutputTokens)}** · ${taskStr}`
+    `> 🧠 Context: **${fmt(totalTokens)}** (Mới: ${fmt(lastInputTokens)} · 💾 Cache: ${fmt(lastCacheTokens)}) · 📤 Out: **${fmt(lastOutputTokens)}** · ${taskStr}`
   ].join('\n');
 }
 
 async function main() {
   const data = await readInput();
 
-  const fullyIdle = data.fullyIdle !== false;
+  // CHỐNG SPAM: Nếu hook được gọi giữa chừng (trong khi AI đang gọi các công cụ liên tiếp),
+  // chỉ kích hoạt khi AI đã kết thúc hoàn toàn lượt làm việc (fullyIdle = true hoặc Stop event).
+  if (data.fullyIdle === false) {
+    process.stdout.write(JSON.stringify({}));
+    return;
+  }
+
   const transcriptPath = data.transcriptPath || '';
   const tokenData = await parseTranscript(transcriptPath);
 
-  const footerMd = buildFooter({ ...tokenData, fullyIdle });
+  // Tổng Context thật của phiên = Token mới + Cache đã đọc
+  const totalTokens = (tokenData.lastInputTokens || 0) + (tokenData.lastCacheTokens || 0);
 
-  // Output userMessage for direct visibility in chat + systemMessage user_markdown for compatibility
+  const footerMd = buildFooter({ ...tokenData, totalTokens });
+
+  // Inject userMessage để hiển thị ra màn hình chat
   const output = {
     injectSteps: [
       {
@@ -170,7 +178,6 @@ async function main() {
 }
 
 main().catch(err => {
-  // On error, silently output empty (don't block agent)
   process.stderr.write(String(err));
   process.stdout.write(JSON.stringify({}));
 });
